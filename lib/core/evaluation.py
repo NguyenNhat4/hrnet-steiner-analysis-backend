@@ -61,6 +61,44 @@ def compute_nme(preds, meta):
     return rmse
 
 
+def compute_sdr(preds, meta, threshold_mm):
+    """
+    Compute Success Detection Rate (SDR) for each sample in the batch.
+    SDR is the percentage of landmasks that are within a certain distance (threshold_mm) from the
+    """
+    targets = meta['pts'] #  correct coordinates of landmarks in the original image, shape (N, L, 2)
+    preds = preds.numpy()
+    target = targets.cpu().numpy()
+
+    N = preds.shape[0]
+    L = preds.shape[1]
+    
+    if 'pixel_size' in meta:
+        pixel_size = meta['pixel_size']
+        if isinstance(pixel_size, torch.Tensor):
+            pixel_size = pixel_size.numpy()
+    else:
+        pixel_size = np.array([0.1] * N) # default pixel size in mm
+
+    sdr_all = []
+    
+    for i in range(N):
+        pts_pred, pts_gt = preds[i], target[i]
+        
+        # calculate distances in pixels
+        distances = np.linalg.norm(pts_pred - pts_gt, axis=1)
+        
+        # convert to physical distance in mm
+        ps = pixel_size[i] if isinstance(pixel_size, (list, np.ndarray)) else pixel_size
+        distances_mm = distances * ps
+        
+        # compute SDR within threshold
+        sdr = np.sum(distances_mm <= threshold_mm) / L * 100
+        sdr_all.append(sdr)
+
+    return sdr_all
+
+
 def decode_preds(output, center, scale, res):
     coords = get_preds(output)  # float type
 

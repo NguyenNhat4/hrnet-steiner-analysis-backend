@@ -1,5 +1,6 @@
 import os
 import json
+import csv
 import torch
 import torch.utils.data as data
 import numpy as np
@@ -37,6 +38,14 @@ class CephDataset(data.Dataset):
 
         valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp')
         self.images = sorted([f for f in os.listdir(self.img_dir) if f.lower().endswith(valid_extensions)])
+        
+        self.pixel_sizes = {}
+        mapping_path = os.path.join(self.data_root, 'cephalogram_machine_mappings.csv')
+        if os.path.exists(mapping_path):
+            with open(mapping_path, 'r') as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    self.pixel_sizes[row['cephalogram_id']] = float(row['pixel_size'])
 
     def __len__(self):
         return len(self.images)
@@ -107,8 +116,10 @@ class CephDataset(data.Dataset):
         
         target = torch.Tensor(target)
         tpts = torch.Tensor(tpts)
+        
+        pixel_size = self.pixel_sizes.get(base_name, 0.1)
 
         meta = {'index': idx, 'center': center, 'scale': scale,
-                'pts': torch.Tensor(pts), 'tpts': tpts}
+                'pts': torch.Tensor(pts), 'tpts': tpts, 'pixel_size': pixel_size}
 
         return img, target, meta

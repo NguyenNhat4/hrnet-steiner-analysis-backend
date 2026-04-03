@@ -14,7 +14,7 @@ import logging
 import torch
 import numpy as np
 
-from .evaluation import decode_preds, compute_nme
+from .evaluation import decode_preds, compute_nme, compute_sdr
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,8 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
 
     nme_count = 0
     nme_batch_sum = 0
+    sdr_20_sum = 0
+    sdr_25_sum = 0
     count_failure_008 = 0
     count_failure_010 = 0
     end = time.time()
@@ -140,6 +142,11 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
             count_failure_008 += failure_008
             count_failure_010 += failure_010
 
+            sdr_20_batch = compute_sdr(preds, meta, 2.0)
+            sdr_25_batch = compute_sdr(preds, meta, 2.5)
+            sdr_20_sum += np.sum(sdr_20_batch)
+            sdr_25_sum += np.sum(sdr_25_batch)
+
             nme_batch_sum += np.sum(nme_temp)
             nme_count = nme_count + preds.size(0)
             for n in range(score_map.size(0)):
@@ -154,10 +161,12 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
     nme = nme_batch_sum / nme_count
     failure_008_rate = count_failure_008 / nme_count
     failure_010_rate = count_failure_010 / nme_count
+    sdr_20_avg = sdr_20_sum / nme_count
+    sdr_25_avg = sdr_25_sum / nme_count
 
     msg = 'Test Epoch {} time:{:.4f} loss:{:.4f} nme:{:.4f} [008]:{:.4f} ' \
-          '[010]:{:.4f}'.format(epoch, batch_time.avg, losses.avg, nme,
-                                failure_008_rate, failure_010_rate)
+          '[010]:{:.4f} SDR@2.0mm:{:.2f}% SDR@2.5mm:{:.2f}%'.format(epoch, batch_time.avg, losses.avg, nme,
+                                failure_008_rate, failure_010_rate, sdr_20_avg, sdr_25_avg)
     logger.info(msg)
 
     if writer_dict:
@@ -165,6 +174,8 @@ def validate(config, val_loader, model, criterion, epoch, writer_dict):
         global_steps = writer_dict['valid_global_steps']
         writer.add_scalar('valid_loss', losses.avg, global_steps)
         writer.add_scalar('valid_nme', nme, global_steps)
+        writer.add_scalar('valid_sdr_2.0mm', sdr_20_avg, global_steps)
+        writer.add_scalar('valid_sdr_2.5mm', sdr_25_avg, global_steps)
         writer_dict['valid_global_steps'] = global_steps + 1
 
     return nme, predictions
@@ -182,6 +193,8 @@ def inference(config, data_loader, model):
 
     nme_count = 0
     nme_batch_sum = 0
+    sdr_20_sum = 0
+    sdr_25_sum = 0
     count_failure_008 = 0
     count_failure_010 = 0
     end = time.time()
@@ -201,6 +214,11 @@ def inference(config, data_loader, model):
             count_failure_008 += failure_008
             count_failure_010 += failure_010
 
+            sdr_20_batch = compute_sdr(preds, meta, 2.0)
+            sdr_25_batch = compute_sdr(preds, meta, 2.5)
+            sdr_20_sum += np.sum(sdr_20_batch)
+            sdr_25_sum += np.sum(sdr_25_batch)
+
             nme_batch_sum += np.sum(nme_temp)
             nme_count = nme_count + preds.size(0)
             for n in range(score_map.size(0)):
@@ -213,10 +231,13 @@ def inference(config, data_loader, model):
     nme = nme_batch_sum / nme_count
     failure_008_rate = count_failure_008 / nme_count
     failure_010_rate = count_failure_010 / nme_count
+    sdr_20_avg = sdr_20_sum / nme_count
+    sdr_25_avg = sdr_25_sum / nme_count
+
 
     msg = 'Test Results time:{:.4f} loss:{:.4f} nme:{:.4f} [008]:{:.4f} ' \
-          '[010]:{:.4f}'.format(batch_time.avg, losses.avg, nme,
-                                failure_008_rate, failure_010_rate)
+          '[010]:{:.4f} SDR@2.0mm:{:.2f}% SDR@2.5mm:{:.2f}%'.format(batch_time.avg, losses.avg, nme,
+                                failure_008_rate, failure_010_rate, sdr_20_avg, sdr_25_avg)
     logger.info(msg)
 
     return nme, predictions
