@@ -133,7 +133,8 @@ python tools/test.py --cfg <CONFIG-FILE> --model-file <MODEL WEIGHT>
 # example:
 python tools/test.py --cfg experiments/wflw/face_alignment_wflw_hrnet_w18.yaml --model-file HR18-WFLW.pth
 ````
-
+#### monitor 
+tensorboard --logdir log/ --port 6006
  
 ## Other applications of HRNets (codes and models):
 * [Human pose estimation](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch)
