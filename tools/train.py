@@ -71,10 +71,16 @@ def main():
         model_state_file = os.path.join(final_output_dir,
                                         'latest.pth')
         if os.path.islink(model_state_file):
-            checkpoint = torch.load(model_state_file)
+            checkpoint = torch.load(model_state_file, weights_only=False)
             last_epoch = checkpoint['epoch']
             best_nme = checkpoint['best_nme']
-            model.load_state_dict(checkpoint['state_dict'])
+            
+            # Check if the loaded object is a full model instance and extract dict
+            loaded_state = checkpoint['state_dict']
+            if isinstance(loaded_state, torch.nn.Module):
+                loaded_state = loaded_state.state_dict()
+                
+            model.load_state_dict(loaded_state)
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint (epoch {})"
                   .format(checkpoint['epoch']))
@@ -126,7 +132,7 @@ def main():
         logger.info('=> saving checkpoint to {}'.format(final_output_dir))
         print("best:", is_best)
         utils.save_checkpoint(
-            {"state_dict": model,
+            {"state_dict": model.state_dict(),
              "epoch": epoch + 1,
              "best_nme": best_nme,
              "optimizer": optimizer.state_dict(),
