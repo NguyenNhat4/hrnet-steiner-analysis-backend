@@ -159,6 +159,8 @@ def transform_preds(coords, center, scale, output_size):
     return coords
 
 
+import math
+
 def crop(img, center, scale, output_size, rot=0):
     center_new = center.clone()
 
@@ -168,14 +170,14 @@ def crop(img, center, scale, output_size, rot=0):
     if sf < 2:
         sf = 1
     else:
-        new_size = int(np.math.floor(max(ht, wd) / sf))
-        new_ht = int(np.math.floor(ht / sf))
-        new_wd = int(np.math.floor(wd / sf))
+        new_size = int(math.floor(max(ht, wd) / sf))
+        new_ht = int(math.floor(ht / sf))
+        new_wd = int(math.floor(wd / sf))
         if new_size < 2:
             return torch.zeros(output_size[0], output_size[1], img.shape[2]) \
                         if len(img.shape) > 2 else torch.zeros(output_size[0], output_size[1])
         else:
-            img = scipy.misc.imresize(img, [new_ht, new_wd])  # (0-1)-->(0-255)
+            img = cv2.resize(img, [new_ht, new_wd])  # (0-1)-->(0-255)
             center_new[0] = center_new[0] * 1.0 / sf
             center_new[1] = center_new[1] * 1.0 / sf
             scale = scale / sf
@@ -207,9 +209,10 @@ def crop(img, center, scale, output_size, rot=0):
 
     if not rot == 0:
         # Remove padding
-        new_img = scipy.misc.imrotate(new_img, rot)
+        rot_mat = cv2.getRotationMatrix2D((new_img.shape[1] / 2.0, new_img.shape[0] / 2.0), rot, 1.0)
+        new_img = cv2.warpAffine(new_img, rot_mat, (new_img.shape[1], new_img.shape[0]))
         new_img = new_img[pad:-pad, pad:-pad]
-    new_img = scipy.misc.imresize(new_img, output_size)
+    new_img = cv2.resize(new_img, output_size)
     return new_img
 
 

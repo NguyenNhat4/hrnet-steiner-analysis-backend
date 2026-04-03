@@ -57,7 +57,14 @@ def main():
     model = nn.DataParallel(model, device_ids=gpus).cuda()
 
     # load model
-    state_dict = torch.load(args.model_file)
+    loaded_obj = torch.load(args.model_file, weights_only=False)
+    
+    # If the loaded object is a full model, extract its state_dict
+    if isinstance(loaded_obj, torch.nn.Module):
+        state_dict = loaded_obj.state_dict()
+    else:
+        state_dict = loaded_obj
+
     if 'state_dict' in state_dict.keys():
         state_dict = state_dict['state_dict']
         model.load_state_dict(state_dict)
