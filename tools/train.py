@@ -22,6 +22,21 @@ from lib.datasets import get_dataset
 from lib.core import function
 from lib.utils import utils
 
+# ── Reproducibility: fix every source of randomness ──────────────────────
+import random
+import numpy as np
+
+SEED = 42
+
+random.seed(SEED)
+np.random.seed(SEED)
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+torch.cuda.manual_seed_all(SEED)           # multi-GPU
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False      # must be False for determinism
+# ─────────────────────────────────────────────────────────────────────────
+
 
 def parse_args():
 
@@ -45,15 +60,20 @@ def main():
     logger.info(pprint.pformat(args))
     logger.info(pprint.pformat(config))
 
-    cudnn.benchmark = config.CUDNN.BENCHMARK
-    cudnn.determinstic = config.CUDNN.DETERMINISTIC
+    cudnn.benchmark = False                    # overridden: determinism requires False
+    cudnn.deterministic = True                 # overridden: determinism requires True
     cudnn.enabled = config.CUDNN.ENABLED
 
     model = models.get_face_alignment_net(config)
 
     # copy model files
+    writer = SummaryWriter(log_dir=tb_log_dir)
+    
+    # Save the config to Tensorboard so you can see it in the UI
+    writer.add_text('Config', f"```yaml\n{pprint.pformat(config)}\n```")
+    
     writer_dict = {
-        'writer': SummaryWriter(log_dir=tb_log_dir),
+        'writer': writer,
         'train_global_steps': 0,
         'valid_global_steps': 0,
     }
