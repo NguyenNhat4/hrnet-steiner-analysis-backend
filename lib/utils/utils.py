@@ -90,7 +90,7 @@ def save_checkpoint(states, predictions, is_best,
     latest_path = os.path.join(output_dir, 'latest.pth')
     if os.path.islink(latest_path):
         os.remove(latest_path)
-    os.symlink(os.path.join(output_dir, filename), latest_path)
+    os.symlink(filename, latest_path)
 
     if is_best and 'state_dict' in states.keys():
         best_state = states['state_dict']

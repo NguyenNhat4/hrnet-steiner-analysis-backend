@@ -106,6 +106,9 @@ def main():
                   .format(checkpoint['epoch']))
         else:
             print("=> no checkpoint found")
+            
+    for group in optimizer.param_groups:
+        group.setdefault('initial_lr', group['lr'])
 
     if isinstance(config.TRAIN.LR_STEP, list):
         lr_scheduler = torch.optim.lr_scheduler.MultiStepLR(
